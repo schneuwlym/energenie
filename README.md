@@ -45,4 +45,4 @@ python energenie.py --ip '192.168.1.10' --password 'socket password' -e
 
 ## If you think my work was useful for you, you might buy me a beer
 
-[![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=LLNQ8N6QKV5GJ&lc=CH&item_name=Mathias Schneuwly&item_number=github-energenie&currency_code=CHF)
+[![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=LLNQ8N6QKV5GJ&lc=CH&item_name=Mathias%20Schneuwly&item_number=github-energenie&currency_code=CHF)
