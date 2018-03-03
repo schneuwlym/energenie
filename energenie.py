@@ -9,6 +9,27 @@ import argparse
 import re
 import urllib
 import urllib2
+import fcntl
+import sys
+import signal
+import errno
+import os
+from contextlib import contextmanager
+
+
+@contextmanager
+def timeout(seconds):
+    def timeout_handler(signum, frame):
+        pass
+
+    original_handler = signal.signal(signal.SIGALRM, timeout_handler)
+
+    try:
+        signal.alarm(seconds)
+        yield
+    finally:
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, original_handler)
 
 
 class Energenie(object):
@@ -51,8 +72,8 @@ class Energenie(object):
 
         try:
             found = re.search('var sockstates = \[(.*)\];', tmp).group(1)
-        except AttributeError:
-            raise Exception('Socket state not found')
+        except AttributeError as err:
+            raise Exception('Socket state not found: %s (%s)' % (str(err), str(tmp)))
         socket_state = found.split(',')
         for s, state in enumerate(socket_state):
             result[s+1] = bool(int(state))
@@ -84,6 +105,8 @@ if __name__ == "__main__":
                         help='')
     parser.add_argument('--timeout', '-t', type=int, dest='timeout', default=5,
                         help='')
+    parser.add_argument('--pid', type=str, dest='pidfile', default='/var/run/energenie.pid',
+                        help='')
     group.add_argument('--enable', '-e', dest='state', action='store_true',
                         help='')
     group.add_argument('--disable', '-d', dest='state', action='store_false',
@@ -93,14 +116,28 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    energenie = Energenie(args.ip, args.password, args.timeout)
     try:
-        if not energenie.login():
-            raise Exception('Could not login')
-        if args.get:
-            print energenie.get_socket_state(args.socket)
-        else:
-            energenie.set_socket_state(args.socket, args.state)
+        fp = open(args.pidfile, 'w')
+        with timeout(5):
+            try:
+                #fcntl.lockf(fp, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                fcntl.lockf(fp, fcntl.LOCK_EX)
+            except IOError:
+                sys.exit(1)
+
+        energenie = Energenie(args.ip, args.password, args.timeout)
+        try:
+            if not energenie.login():
+                raise Exception('Could not login')
+            if args.get:
+                print energenie.get_socket_state(args.socket)
+            else:
+                energenie.set_socket_state(args.socket, args.state)
+        finally:
+            if not energenie.logout():
+                raise Exception('Could not logout')
     finally:
-        if not energenie.logout():
-            raise Exception('Could not logout')
+        fp.close()
+        if os.path.exists(args.pidfile):
+            os.remove(args.pidfile)
+
